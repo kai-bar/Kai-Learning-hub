@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String            @id @default(cuid())
+  name         String
+  email        String            @unique
+  passwordHash String
+  role         Role              @default(STUDENT)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  studentProfile StudentProfile?
+  teacherProfile TeacherProfile?
+  adminProfile   AdminProfile?
+  enrollments Enrollment[]
+  examAttempts ExamAttempt[]
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+model AdminProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model StudentProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  className String?
+  createdAt DateTime @default(now())
+}
+
+model TeacherProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  qualification String?
+  department   String?
+  bio          String?
+  createdAt    DateTime @default(now())
+  courses      Course[]
+  classSessions ClassSession[]
+  exams        Exam[]
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  teacherId   String
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
+  lessons     Lesson[]
+  enrollments Enrollment[]
+  exams       Exam[]
+  classSessions ClassSession[]
+  createdAt   DateTime     @default(now())
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  videoUrl  String?
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  courseId  String
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  course    Course   @relation(fields: [courseId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([courseId, studentId])
+}
+
+model ClassSession {
+  id          String         @id @default(cuid())
+  title       String
+  courseId    String
+  course      Course         @relation(fields: [courseId], references: [id])
+  teacherId   String
+  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
+  scheduledAt DateTime
+  meetingLink String?
+  createdAt   DateTime       @default(now())
+}
+
+model Exam {
+  id           String       @id @default(cuid())
+  title        String
+  courseId     String
+  course       Course       @relation(fields: [courseId], references: [id])
+  teacherId    String
+  teacher      TeacherProfile @relation(fields: [teacherId], references: [id])
+  durationMins Int
+  totalMarks   Int
+  questions    Question[]
+  attempts     ExamAttempt[]
+  createdAt    DateTime     @default(now())
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  examId        String
+  exam          Exam         @relation(fields: [examId], references: [id])
+  text          String
+  type          QuestionType
+  options       String?
+  correctAnswer String?
+  createdAt     DateTime     @default(now())
+}
+
+model ExamAttempt {
+  id          String   @id @default(cuid())
+  studentId   String
+  student     User     @relation(fields: [studentId], references: [id])
+  examId      String
+  exam        Exam     @relation(fields: [examId], references: [id])
+  score       Int
+  percentage  Float
+  status      String   @default("PENDING")
+  submittedAt DateTime @default(now())
+}
